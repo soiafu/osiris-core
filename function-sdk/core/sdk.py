@@ -1,7 +1,11 @@
 #Sprint 1
 from datetime import datetime
+import asyncio
+import uuid
 
 registered_functions = {} 
+async_status = {}
+async_result = {}
 logs_storage = {} # separate storage for logs
 
 #API 1 -  Register Function Command
@@ -139,10 +143,22 @@ def invokeWithRetry(function_name: str, *args: list, retries: int = 3) -> any:
     pass
 
 async def invokeFunctionAsync(function_name: str, input_data: dict) -> str:
-    pass
+    request_id = f"request-{uuid.uuid4().hex[:8]}"
+    async_status[request_id] = "pending"
+    async def run_function(req):
+        async_status[req] = "running"
+        try:
+            async_result[req] = invokeRegisteredFunction(function_name, input_data.values()[0], input_data.values()[1])
+            async_status[req] = "completed"
+        except:
+            async_status[req] = "failed"
+    asyncio.create_task(run_function(request_id))
+    return request_id
 
 def checkFunctionStatus(request_id: str) -> str:
-    pass
+    if request_id not in async_status:
+        return "unrecognized"
+    return async_status[request_id]
 
 async def getFunctionResultAsync(request_id: str) -> dict:
     pass
@@ -169,7 +185,6 @@ print()
 print("Test Case 4:")
 response = setFunctionTimeout("addNumbers", 5000)  # 5 seconds, should return true
 print(f"Timeout set: {response}")
-<<<<<<< HEAD
 print()
 
 
@@ -179,6 +194,26 @@ logs = getFunctionLogs("addNumbers", limit=10)
 print(f"Logs for addNumbers: {logs}")
 print()
 
+# Test case of API 5
+print("Test Case 5:")
+response = setFunctionEnv("addNumbers", {"a": 1, "b": 2})
+response = setFunctionEnv("addNumbers", {"b": 1, "c": 2})
+print(response, registered_functions)
+
+# Test case of API 9 and 10
+print("Test Case 9 and 10:")
+async def test_api9():
+    input_data = {
+        "a": 10,
+        "b": 5
+    }
+    request_id = await invokeFunctionAsync("addNumbers", input_data)
+    print(request_id)
+    print(checkFunctionStatus(request_id))
+    await asyncio.sleep(1)
+    print(checkFunctionStatus(request_id))
+
+asyncio.run(test_api9())
 
 
 #PUTTING AT END SO THAT FUNCTION EXISTS FOR OTHER TEST CASES
@@ -186,13 +221,3 @@ print()
 print("Test Case 2:")
 response = deregisterFunction("addNumbers")
 print(f"Result of deregistering addNumbers: {response}") 
-=======
-
-# Test case of API 5
-print("Test Case 5:")
-response = setFunctionEnv("addNumbers", {"a": 1, "b": 2})
-response = setFunctionEnv("addNumbers", {"b": 1, "c": 2})
-print(response, registered_functions)
-
-# Test case of API 9
->>>>>>> 0e2d76e (api 5)
