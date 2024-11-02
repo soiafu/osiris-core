@@ -7,6 +7,7 @@ registered_functions = {}
 async_status = {}
 async_result = {}
 logs_storage = {} # separate storage for logs
+error_handlers = {}
 
 #API 1 -  Register Function Command
 def registerFunction(function_name: str, handler: callable, runtime: str) -> bool:
@@ -135,12 +136,25 @@ def getFunctionLogs(function_name: str, limit: int = 100) -> list:
 
     return logs[:limit]
 
-
+# API 7: Handle Function Errors Command
 def handleFunctionError(function_name: str, error_handler: callable) -> bool:
-    pass
+    try:
+        error_handlers[function_name] = error_handler
+        return True
+    except Exception as e:
+        print(f"Error in setting error handler: {e}")
+        return False
 
+# API 8: Invoke Function with Retry Command
 def invokeWithRetry(function_name: str, *args: list, retries: int = 3) -> any:
-    pass
+    attempt = 0
+    while attempt < retries:
+        try:
+            return invokeRegisteredFunction(function_name, *args)
+        except Exception as e:
+            attempt += 1
+            if attempt == retries:
+                raise e
 
 async def invokeFunctionAsync(function_name: str, input_data: dict) -> str:
     request_id = f"request-{uuid.uuid4().hex[:8]}"
@@ -160,6 +174,7 @@ def checkFunctionStatus(request_id: str) -> str:
         return "unrecognized"
     return async_status[request_id]
 
+# API 11: Get Function Result
 async def getFunctionResultAsync(request_id: str) -> dict:
     pass
 
@@ -215,6 +230,17 @@ async def test_api9():
 
 asyncio.run(test_api9())
 
+#Test case API 7 8
+print("Test case 7")
+def customErrorHandler(error):
+    print(f"Error occurred: {error}")
+
+response = handleFunctionError("addNumbers", customErrorHandler)
+print(response)
+
+print("test case 8")
+response = invokeWithRetry("addNumbers", 3, 5, retries=3)
+print(response)
 
 #PUTTING AT END SO THAT FUNCTION EXISTS FOR OTHER TEST CASES
 #Test Case for API 2 
