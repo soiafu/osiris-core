@@ -107,7 +107,14 @@ def setFunctionTimeout(function_name: str, timeout_ms: int) -> bool:
     return False
 
 def setFunctionEnv(function_name: str, env_vars: dict) -> bool:
-    pass
+    if function_name not in registered_functions:
+        return False
+    func = registered_functions[function_name]
+    if "env_vars" not in func:
+        func["env_vars"] = env_vars
+    else:
+        func["env_vars"].update(env_vars)
+    return True
 
 #API 6: Retrieve Function Logs Command
 def getFunctionLogs(function_name: str, limit: int = 100) -> list:
@@ -162,6 +169,7 @@ print()
 print("Test Case 4:")
 response = setFunctionTimeout("addNumbers", 5000)  # 5 seconds, should return true
 print(f"Timeout set: {response}")
+<<<<<<< HEAD
 print()
 
 
@@ -178,3 +186,13 @@ print()
 print("Test Case 2:")
 response = deregisterFunction("addNumbers")
 print(f"Result of deregistering addNumbers: {response}") 
+=======
+
+# Test case of API 5
+print("Test Case 5:")
+response = setFunctionEnv("addNumbers", {"a": 1, "b": 2})
+response = setFunctionEnv("addNumbers", {"b": 1, "c": 2})
+print(response, registered_functions)
+
+# Test case of API 9
+>>>>>>> 0e2d76e (api 5)
