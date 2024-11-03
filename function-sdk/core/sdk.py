@@ -111,6 +111,7 @@ def setFunctionTimeout(function_name: str, timeout_ms: int) -> bool:
         return True
     return False
 
+#API 5: Set Function Environment Variables Command
 def setFunctionEnv(function_name: str, env_vars: dict) -> bool:
     if function_name not in registered_functions:
         return False
@@ -156,6 +157,7 @@ def invokeWithRetry(function_name: str, *args: list, retries: int = 3) -> any:
             if attempt == retries:
                 raise e
 
+#API 9: Invoke Function Asynchronously
 async def invokeFunctionAsync(function_name: str, input_data: dict) -> str:
     request_id = f"request-{uuid.uuid4().hex[:8]}"
     async_status[request_id] = "pending"
@@ -169,6 +171,7 @@ async def invokeFunctionAsync(function_name: str, input_data: dict) -> str:
     asyncio.create_task(run_function(request_id))
     return request_id
 
+#API 10: Check Function Status
 def checkFunctionStatus(request_id: str) -> str:
     if request_id not in async_status:
         return "unrecognized"
@@ -241,6 +244,7 @@ print(response)
 print("test case 8")
 response = invokeWithRetry("addNumbers", 3, 5, retries=3)
 print(response)
+
 
 #PUTTING AT END SO THAT FUNCTION EXISTS FOR OTHER TEST CASES
 #Test Case for API 2 
