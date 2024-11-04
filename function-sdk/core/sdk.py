@@ -65,16 +65,20 @@ def invokeRegisteredFunction(function_name: str, *args: list) -> any:
     if function_name in registered_functions:
         try:
             # test case for dictionary
-            if len(args) == 1 and isinstance(args[0], dict):
+            if len(args) == 1 and isinstance(args[0], dict) and "__async_key" in args[0]:
                 input_data = args[0]
-                prepared_args = [input_data[key] for key in input_data]
+                prepared_args = []
+                for key in args[0]:
+                    if key != "__async_key":
+                        prepared_args.append(input_data[key])
             else: 
                 prepared_args = args
             inputs = ", ".join(map(str, prepared_args))
-            print("Arguments:" + str(prepared_args))
+            print("Arguments:", prepared_args)
             logs_storage[function_name].append(timestamped_log(f"Function started with inputs: {inputs}"))
             result = registered_functions[function_name]['handler'](*prepared_args)
             logs_storage[function_name].append(timestamped_log(f"Function executed successfully. Result: {result}"))
+            print(f"result {result}")
             return result
         except Exception as e:
             logs_storage[function_name].append(timestamped_log(f"Function execution failed with error: {str(e)}"))
@@ -153,10 +157,11 @@ async def invokeFunctionAsync(function_name: str, input_data: dict) -> str:
     async def run_function(req):
         async_status[req] = "running"
         try:
-           key_value_pairs = [(key, value) for key, value in input_data.items()]
-           async_result[req] = await asyncio.to_thread(invokeRegisteredFunction, function_name, *key_value_pairs)
-           #async_result[req] = invokeRegisteredFunction(function_name, *key_value_pairs)
-           async_status[req] = "completed"
+            #key_value_pairs = [(key, value) for key, value in input_data.items()]
+            #async_result[req] = await asyncio.to_thread(invokeRegisteredFunction, function_name, *key_value_pairs)
+            input_data["__async_key"] = True
+            async_result[req] = invokeRegisteredFunction(function_name, input_data)
+            async_status[req] = "completed"
         except:
             async_status[req] = "failed"
     asyncio.create_task(run_function(request_id))
@@ -170,7 +175,13 @@ def checkFunctionStatus(request_id: str) -> str:
 
 # API 11: Get Function Result
 async def getFunctionResultAsync(request_id: str) -> dict:
-    pass
+    while checkFunctionStatus(request_id) != "completed":
+        print(f"Waiting for completion of {request_id}")
+        await asyncio.sleep(1)  
+
+    result = async_result.get(request_id, {})
+    print(f"Result for {request_id}: {result}")
+    return result
 
 # ------------ Test Cases --------------
 
@@ -209,8 +220,7 @@ response = setFunctionEnv("addNumbers", {"a": 1, "b": 2})
 response = setFunctionEnv("addNumbers", {"b": 1, "c": 2})
 print(response, registered_functions)
 
-# Test case of API 9 and 10
-print("Test Case 9 and 10:")
+print("Test Case 9, 10, and 11:")
 async def test_api9():
     input_data = {
         "a": 10,
@@ -219,6 +229,8 @@ async def test_api9():
     request_id = await invokeFunctionAsync("addNumbers", input_data)
     print(request_id)
     print(checkFunctionStatus(request_id))
+    res = await getFunctionResultAsync(request_id)
+    print(res)
     await asyncio.sleep(1)
     print(checkFunctionStatus(request_id))
 
@@ -235,6 +247,7 @@ print(response)
 print("test case 8")
 response = invokeWithRetry("addNumbers", 3, 5, retries=3)
 print(response)
+
 
 
 #PUTTING AT END SO THAT FUNCTION EXISTS FOR OTHER TEST CASES
