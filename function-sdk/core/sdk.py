@@ -56,41 +56,30 @@ def deregisterFunction(function_name: str) -> bool:
 
 #API 3 - Invoke Registered Function Command
 def invokeRegisteredFunction(function_name: str, *args: list) -> any:
-    '''
-    API calls a function that has been registered on the platform by passing in the necessary arguments and returning the result.
-    The function is invoked with the specified arguments, and the output from the function handler is returned.
-
-    Parameters:
-        - function_name: The name of the function to invoke. (string)
-        - args: The list of arguments to pass to the function. (list of any)
-    '''
-    # Ensure logs_storage has a list for this function's logs
     if function_name not in logs_storage:
         logs_storage[function_name] = []
     
-    # Helper function to generate a timestamped log message
     def timestamped_log(message: str) -> str:
         return f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {message}"
 
     if function_name in registered_functions:
         try:
-            # Log function start with inputs
-            inputs = ", ".join(map(str, args))
+            # test case for dictionary
+            if len(args) == 1 and isinstance(args[0], dict):
+                input_data = args[0]
+                prepared_args = [input_data[key] for key in input_data]
+            else: 
+                prepared_args = args
+            inputs = ", ".join(map(str, prepared_args))
+            print("Arguments:" + str(prepared_args))
             logs_storage[function_name].append(timestamped_log(f"Function started with inputs: {inputs}"))
-            
-            # Invoke the function and get the result
-            result = registered_functions[function_name]['handler'](*args)
-            
-            # Log the successful result
+            result = registered_functions[function_name]['handler'](*prepared_args)
             logs_storage[function_name].append(timestamped_log(f"Function executed successfully. Result: {result}"))
-            
             return result
         except Exception as e:
-            # Log the error if function execution fails
             logs_storage[function_name].append(timestamped_log(f"Function execution failed with error: {str(e)}"))
             raise
     else:
-        # Log if function is not registered
         logs_storage[function_name].append(timestamped_log("Attempted to invoke unregistered function"))
         raise ValueError(f"Function '{function_name}' is not registered.")
 
@@ -164,8 +153,10 @@ async def invokeFunctionAsync(function_name: str, input_data: dict) -> str:
     async def run_function(req):
         async_status[req] = "running"
         try:
-            async_result[req] = invokeRegisteredFunction(function_name, input_data.values()[0], input_data.values()[1])
-            async_status[req] = "completed"
+           key_value_pairs = [(key, value) for key, value in input_data.items()]
+           async_result[req] = await asyncio.to_thread(invokeRegisteredFunction, function_name, *key_value_pairs)
+           #async_result[req] = invokeRegisteredFunction(function_name, *key_value_pairs)
+           async_status[req] = "completed"
         except:
             async_status[req] = "failed"
     asyncio.create_task(run_function(request_id))
